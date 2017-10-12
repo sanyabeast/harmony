@@ -1,0 +1,6 @@
+{
+    "dependencies" : {
+        "requirejs" : "latest",
+        "postal": "git://github.com/sanyabeast/postal.git"
+    }
+}
