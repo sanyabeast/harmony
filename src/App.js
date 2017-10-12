@@ -1,10 +1,11 @@
 "use strict";
-define(["./WorkerMaster"], function(Worker){
+define(["./Harmony"], function(Harmony){
 
     class App {
         constructor(){
             this.randomNum = Math.random();
-            this.worker = new Worker();
+            this.harmony = new Harmony();
+            window.harmony = this.harmony;
         }
     }
 
