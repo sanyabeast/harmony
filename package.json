@@ -1,4 +1,10 @@
 {
+	"name" : "hramony",
+	"author" : {
+		"name" : "Alex",
+		"email" : "a.gvrnsk@gmail.com"
+	},
+	"version" : "0.1.0-b",
     "dependencies" : {
         "requirejs" : "latest",
         "postal": "git://github.com/sanyabeast/postal.git"

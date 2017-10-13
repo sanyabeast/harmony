@@ -1,16 +1,27 @@
 "use strict";
 define(function(){
 
+    var harmony;
+
     function toFunc(code){ return eval(["(", code, ")"].join("")); }
 
     var messageHandlers = {
-        "exec-async" : function(execData){
-            return this.callbacks[execData.execAsyncID] && this.callbacks[execData.execAsyncID](execData.data) || false;      
+        "exec-await" : function(dataContainer){
+            return this.callbacks[dataContainer.execAsyncID] && this.callbacks[dataContainer.execAsyncID](dataContainer.data) || false;      
+        },
+        "return" : function(dataContainer){
+            console.log(dataContainer);
+            return this.callbacks[dataContainer.callbackID] && this.callbacks[dataContainer.callbackID](dataContainer.data);
+            console.log(arguments);
         }
     };
 
     class Harmony {
-        constructor(){
+        constructor(newInstance){
+            if (harmony instanceof Harmony && !newInstance){
+                return harmony;
+            }
+
             const MASTER_WORKER_ID = this.randString("master");
             this.onWorkerMessage = this.onWorkerMessage.bind(this);
 
@@ -26,10 +37,36 @@ define(function(){
         /*fasters*/
 
         run(onStart, onComplete){
+            if (onComplete){
+                this.postMaster({
+                    onStart : onStart,
+                    onComplete : onComplete,
+                }, "exec-await")
+            } else {
+                this.postMaster(onStart, "exec");
+            }
+            
+        }
+
+        set(name, value){
             this.postMaster({
-                onStart : onStart,
-                onComplete : onComplete,
-            }, "exec-async")
+                name : name,
+                value : value
+            }, "define");
+        }
+
+        get(name, handler){
+            var callbackID;
+
+            if (handler){
+                callbackID = this.randString("callback");
+                this.callbacks[callbackID] = handler;
+            }
+
+            this.postMaster({
+                name : name,
+                callbackID : callbackID
+            }, "return");
         }
 
         /*~~~~~~~~~~~~~~*/
@@ -49,30 +86,37 @@ define(function(){
 
             var messageHandlers = {
                 "define" : function(data){
-                    self[data.name] = data.value;
+                    self[data.value.name] = data.value.value;
                 },
                 "log" : function(data){
                     console.log(self, this, data);
                 },
                 "exec" : function(data){
-                    log(arguments);
-                    data.value(data);
+                    data.value.call(self, data);
                 },
-                "exec-async" : function(data){
+                "exec-await" : function(data){
                     log(data);
                     var callback = toFunc(data.value.callback);
                     var execAsyncID = data.value.execAsyncID;
 
-                    callback(data, function(outputDate){
+                    callback.call(self, data, function(outputData){
                         this.post({
                             execAsyncID : execAsyncID,
-                            data : outputDate
-                        }, "exec-async");
+                            data : outputData
+                        }, "exec-await");
                     }.bind(this));
 
                 },
                 "repost" : function(data){
                     this.post(data, "repost");
+                },
+                "return" : function(data){
+                    var outputData = self[data.value.name];
+
+                    this.post({
+                        data : outputData,
+                        callbackID : data.value.callbackID
+                    }, "return");
                 }
             };
 
@@ -126,8 +170,8 @@ define(function(){
             if (dataContainer.type == "function"){
                 dataContainer.type = "function";
                 dataContainer.value = data.toString();
-            } else if (action == "exec-async"){
-                let execAsyncID = this.randString("exec-async-cb");
+            } else if (action == "exec-await"){
+                let execAsyncID = this.randString("exec-await-cb");
 
                 dataContainer.value = {
                     callback : data.onStart.toString(),
@@ -156,6 +200,7 @@ define(function(){
 
             worker.id = workerID;
             worker.onmessage = this.onWorkerMessage;
+            worker.onerror = this.onWorkerError;
 
             return worker;
         }
@@ -191,6 +236,10 @@ define(function(){
             }
         }
 
+        onWorkerError(){
+            console.warn(arguments);
+        }
+
         template(string, /*obj*/settings){
             if (!settings) return string;
             var matches = string.match(/\$[^${ ;,]*/g) || [];
@@ -218,8 +267,9 @@ define(function(){
         }
     };
 
-    // log(Harmony.toString());
+    Harmony.prototype.Harmony = Harmony;
+    harmony = new Harmony();
 
-    return Harmony;
+    return harmony;
 
 });
