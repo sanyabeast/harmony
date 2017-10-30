@@ -1,10 +1,10 @@
 {
-	"name" : "hramony",
+	"name" : "harmony",
 	"author" : {
 		"name" : "Alex",
 		"email" : "a.gvrnsk@gmail.com"
 	},
-	"version" : "0.1.0-b",
+	"version" : "0.1.1-b",
     "dependencies" : {
         "requirejs" : "latest",
         "postal": "git://github.com/sanyabeast/postal.git"
