@@ -131,9 +131,13 @@ var depenedncies = [];
                             var handler = command.handler;
                             typeof handler == "function" && handler.call(data);
                         break;
+                        case "eval":
+                            var code = command.code;
+                            eval(code);
+                        break;
                     }
 
-                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just run recieved command"].join(" "));
+                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just run recieved command -", command.type].join(" "));
                 };
 
                 self.onmessage = function(messageEvt){
@@ -163,8 +167,19 @@ var depenedncies = [];
             delete this.eventCallbacks[workerUID][subUID];
             return this;
         },
+        define : function(workerUID, key, value){
+            var worker = this.__getWorker(workerUID);
+
+            worker.post({
+                type : "define",
+                key : key,
+                value : value
+            }); 
+
+            return this;
+        },
         run : function(workerUID, handler, data){
-            var worker = this.workers[workerUID] || this.__createWorker(workerUID);
+            var worker = this.__getWorker(workerUID);
             worker.post({
                 type : "exec",
                 handler : handler,
@@ -173,11 +188,27 @@ var depenedncies = [];
 
             return this;
         },
+        eval : function(workerUID, code, settings){
+            var worker = this.__getWorker(workerUID);
+
+            worker.post({
+                type : "eval",
+                code : this.util.template(code, settings),
+            }); 
+
+            return this;
+
+        },
         putMessage : function(workerUID, data){
             this.eventCallbacks[workerUID] = this.eventCallbacks[workerUID] || {};
             this.util.iterateObj(this.eventCallbacks[workerUID], function(callback, subUID){
                 callback(data, subUID, workerUID, this);
             }, this);
+        },
+        __getWorker : function(workerUID){
+            var worker = this.workers[workerUID] || this.__createWorker(workerUID);
+            this.workers[workerUID] = worker;
+            return worker;
         },
         __postMessage : function(workerUID, data){
             this.workers[workerUID].post(data);
