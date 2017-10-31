@@ -1,5 +1,8 @@
 {
 	"name" : "harmony",
+	"scripts" : {
+		"babel" : "babel --presets es2015 src/Harmony.js -o harmony.js"
+	},
 	"author" : {
 		"name" : "Alex",
 		"email" : "a.gvrnsk@gmail.com"

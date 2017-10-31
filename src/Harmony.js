@@ -16,27 +16,28 @@ define(function(){
         }
     };
 
-    class Harmony {
-        constructor(newInstance){
-            if (harmony instanceof Harmony && !newInstance){
-                return harmony;
-            }
-
-            const MASTER_WORKER_ID = this.randString("master");
-            this.onWorkerMessage = this.onWorkerMessage.bind(this);
-
-            this.worker = this.createWorker(this.wrapSource(this.masterWorkerSource, {
-                workerID : "\"" + MASTER_WORKER_ID + "\"",
-                isMaster : true
-            }), MASTER_WORKER_ID);
-
-            this.customWorkers = {};
-            this.callbacks = {};
+    var Harmony = function(newInstance){
+        if (harmony instanceof Harmony && !newInstance){
+            return harmony;
         }
+
+        const MASTER_WORKER_ID = this.randString("master");
+        this.onWorkerMessage = this.onWorkerMessage.bind(this);
+
+        this.worker = this.createWorker(this.wrapSource(this.masterWorkerSource, {
+            workerID : "\"" + MASTER_WORKER_ID + "\"",
+            isMaster : true
+        }), MASTER_WORKER_ID);
+
+        this.customWorkers = {};
+        this.callbacks = {};
+    };
+
+    Harmony.prototype = {
 
         /*fasters*/
 
-        run(onStart, onComplete){
+        run : function(onStart, onComplete){
             if (onComplete){
                 this.postMaster({
                     onStart : onStart,
@@ -46,16 +47,16 @@ define(function(){
                 this.postMaster(onStart, "exec");
             }
             
-        }
+        },
 
-        set(name, value){
+        set : function(name, value){
             this.postMaster({
                 name : name,
                 value : value
             }, "define");
-        }
+        },
 
-        get(name, handler){
+        get : function(name, handler){
             var callbackID;
 
             if (handler){
@@ -67,15 +68,15 @@ define(function(){
                 name : name,
                 callbackID : callbackID
             }, "return");
-        }
+        },
 
         /*~~~~~~~~~~~~~~*/
 
         get messageHandlers(){
             return messageHandlers;
-        }
+        },
 
-        masterWorkerSource(){
+        masterWorkerSource : function(){
             function toFunc(code){ return eval(["(", code, ")"].join("")); }
             self.log = self.console.log.bind(self.console);
 
@@ -120,25 +121,25 @@ define(function(){
                 }
             };
 
-            class WorkerAgent{
-                constructor(){
-                    self.onmessage = this.onMessage.bind(this)
-                }
+            var WorkerAgent = function(){
+                self.onmessage = this.onMessage.bind(this)
+            };
 
+            WorkerAgent.prototype = {
                 get messageHandlers(){
                     return messageHandlers;
-                }
+                },
 
-                post(/*any*/data, /*str||undef*/action){
+                post : function(/*any*/data, /*str||undef*/action){
                     self.postMessage({
                         workerID : WORKER_ID,
                         isMaster : IS_MASTER,
                         data : data,
                         action : action
                     });
-                }
+                },
 
-                onMessage(/*self.Message*/message){
+                onMessage : function(/*self.Message*/message){
                     var data = message.data;
                     if (data.type == "function") data.value = toFunc(data.value);
 
@@ -149,19 +150,20 @@ define(function(){
                 }
             }
 
+
             self.workerClient = new WorkerAgent();
             
-        }
+        },
 
-        post(/*window.Worker*/worker, /*any*/data, /*str||undef*/action){
+        post : function(/*window.Worker*/worker, /*any*/data, /*str||undef*/action){
             worker.postMessage(this.wrapPostData(data, action));
-        }
+        },
 
-        postMaster(/*any*/data, /*srt*/action){
+        postMaster : function(/*any*/data, /*srt*/action){
             this.post(this.worker, data, action);
-        }
+        },
 
-        wrapPostData(/*any*/data, /*str||undef*/action){
+        wrapPostData : function(/*any*/data, /*str||undef*/action){
             var dataContainer = {
                 type : typeof data,
                 action : action
@@ -184,9 +186,9 @@ define(function(){
             }
 
             return dataContainer;
-        }
+        },
 
-        createWorker(/*str*/workerSource, /*str||undef*/id){
+        createWorker : function(/*str*/workerSource, /*str||undef*/id){
             var workerID = id || this.randString("worker");
 
             if (typeof workerSource == "function"){
@@ -203,9 +205,9 @@ define(function(){
             worker.onerror = this.onWorkerError;
 
             return worker;
-        }
+        },
 
-        createExtraWorker(/*fun||str*/workerSource, /*fun||undef*/callback){
+        createExtraWorker : function(/*fun||str*/workerSource, /*fun||undef*/callback){
 
             var worker = this.createWorker(workerSource);            
 
@@ -215,13 +217,13 @@ define(function(){
             };
 
             return worker;
-        }
+        },
 
-        onMasterWorkerMessage(/*obj*/dataContainer){
+        onMasterWorkerMessage : function(/*obj*/dataContainer){
             this.messageHandlers[dataContainer.action] && this.messageHandlers[dataContainer.action].call(this, dataContainer.data);
-        }
+        },
 
-        onWorkerMessage(/*window.MessageEvent*/messageEvent){
+        onWorkerMessage : function(/*window.MessageEvent*/messageEvent){
             var dataContainer = messageEvent.data;
 
             if (dataContainer.isMaster){
@@ -234,13 +236,13 @@ define(function(){
             if (this.customWorkers[workerID] && this.customWorkers[workerID].callback){
                 this.customWorkers[workerID].callback(messageEvent);
             }
-        }
+        },
 
-        onWorkerError(){
+        onWorkerError : function(){
             console.warn(arguments);
-        }
+        },
 
-        template(string, /*obj*/settings){
+        template : function(string, /*obj*/settings){
             if (!settings) return string;
             var matches = string.match(/\$[^${ ;,]*/g) || [];
             var vars = [];
@@ -255,17 +257,17 @@ define(function(){
             }
 
             return string;
-        }
+        },
 
-        randString(/*str*/prefix){ return [(prefix || ""), Math.random().toString(32).substring(3, 13)].join("-"); }
+        randString : function(/*str*/prefix){ return [(prefix || ""), Math.random().toString(32).substring(3, 13)].join("-"); },
 
-        wrapSource(/*fun*/workerSource, /*obj*/vars){
+        wrapSource : function(/*fun*/workerSource, /*obj*/vars){
             var strSource = workerSource.toString();
             strSource = (strSource.indexOf("function") == 0 ? "" : "function ") + strSource;
             strSource = this.template(strSource, vars);
             return ["(", strSource, ".call(self))"].join("");
-        }
-    };
+        },
+    }
 
     Harmony.prototype.Harmony = Harmony;
     harmony = new Harmony();
