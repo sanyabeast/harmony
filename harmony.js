@@ -66,7 +66,7 @@ var depenedncies = [];
             },
             template : function(string, /*obj*/settings){
                 if (!settings) return string;
-                var matches = string.match(/\$[^${ ";,]*/g) || [];
+                var matches = string.match(/\$[^${ ";,.!]*/g) || [];
                 var vars = [];
 
                 for (var a = 0, l = matches.length, name; a < l; a++){
@@ -129,7 +129,7 @@ var depenedncies = [];
                         case "exec":
                             var data = command.data;
                             var handler = command.handler;
-                            typeof handler == "function" && handler.call(data);
+                            typeof handler == "function" && handler.call(self, data);
                         break;
                         case "eval":
                             var code = command.code;
