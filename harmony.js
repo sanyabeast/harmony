@@ -100,6 +100,9 @@ var depenedncies = [];
         extra : {
             workerSource : function(){
                 var WORKER_ID = "$workerUID";
+                var LOG_ENABLED = $logEnabled;
+
+                LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "is running..."].join(" "));
                 
                 var __toFuncCache = {};
                 var __toFunc = function(code){
@@ -112,23 +115,25 @@ var depenedncies = [];
 
                 var post = function(data){
                     self.postMessage(data);
+                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just posted message"].join(" "));
                 };
 
                 var __run = function(command){
-                    console.log(command);
                     switch(command.type){
                         case "define":
                             var key = command.key;
                             var value = command.value;
                             self[key] = value;
-                            if (command.handler) command.handler.call(self, value, key); 
+                            typeof command.handler == "function" && command.handler.call(self, value, key); 
                         break;
                         case "exec":
                             var data = command.data;
                             var handler = command.handler;
-                            handler.call(data);
+                            typeof handler == "function" && handler.call(data);
                         break;
                     }
+
+                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just run recieved command"].join(" "));
                 };
 
                 self.onmessage = function(messageEvt){
@@ -158,9 +163,9 @@ var depenedncies = [];
             delete this.eventCallbacks[workerUID][subUID];
             return this;
         },
-        run : function(workerUID, data, handler){
+        run : function(workerUID, handler, data){
             var worker = this.workers[workerUID] || this.__createWorker(workerUID);
-            worker.__postMessage({
+            worker.post({
                 type : "exec",
                 handler : handler,
                 data : data
@@ -179,7 +184,8 @@ var depenedncies = [];
         },
         __createWorker(workerUID){
             var worker = new this.WorkerManager(this, workerUID, this.util.toIIFEString(this.extra.workerSource, {
-                workerUID : workerUID
+                workerUID : workerUID,
+                logEnabled : true
             }));
 
             return worker;
