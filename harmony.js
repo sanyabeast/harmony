@@ -99,6 +99,7 @@ var depenedncies = [];
         },
         extra : {
             workerSource : function(){
+                var window = self;
                 var WORKER_ID = "$workerUID";
                 var LOG_ENABLED = $logEnabled;
 
@@ -116,6 +117,15 @@ var depenedncies = [];
                 var post = function(data){
                     self.postMessage(data);
                     LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just posted message"].join(" "));
+                };
+
+                var define = function(deps, factory){
+                    if (typeof deps == "factory"){
+                        factory = deps;
+                        deps = [];
+                    }
+
+                    factory.apply(self, deps);
                 };
 
                 var __run = function(command){
