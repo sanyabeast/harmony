@@ -37,14 +37,24 @@ define(function(){
 
         /*fasters*/
 
-        run : function(onStart, onComplete){
+        run : function(data, onStart, onComplete){
+            if (typeof data == "function"){
+                onComplete = onStart;
+                onStart = data;
+                data = null;
+            }
+
             if (onComplete){
                 this.postMaster({
                     onStart : onStart,
                     onComplete : onComplete,
+                    data : data
                 }, "exec-await")
             } else {
-                this.postMaster(onStart, "exec");
+                this.postMaster({
+                    callback : onStart,
+                    data : data
+                }, "exec");
             }
             
         },
@@ -77,7 +87,13 @@ define(function(){
         },
 
         masterWorkerSource : function(){
-            function toFunc(code){ return eval(["(", code, ")"].join("")); }
+            var toFuncCache = {};
+
+            function toFunc(code){ 
+                var result = toFuncCache[code] || eval(["(", code, ")"].join("")); 
+                toFuncCache[code] = result;
+                return result;
+            }
             self.log = self.console.log.bind(self.console);
 
             const WORKER_ID = $workerID;
@@ -93,14 +109,15 @@ define(function(){
                     console.log(self, this, data);
                 },
                 "exec" : function(data){
-                    data.value.call(self, data);
+                    var callback = toFunc(data.value.callback);
+                    callback.call(self, data.value.data);
                 },
                 "exec-await" : function(data){
                     log(data);
                     var callback = toFunc(data.value.callback);
                     var execAsyncID = data.value.execAsyncID;
 
-                    callback.call(self, data, function(outputData){
+                    callback.call(self, data.value.data, function(outputData){
                         this.post({
                             execAsyncID : execAsyncID,
                             data : outputData
@@ -171,16 +188,26 @@ define(function(){
 
             if (dataContainer.type == "function"){
                 dataContainer.type = "function";
-                dataContainer.value = data.toString();
+                dataContainer.value = data._stringified || data.toString();
+                data._stringified = data.toString();
             } else if (action == "exec-await"){
                 let execAsyncID = this.randString("exec-await-cb");
 
                 dataContainer.value = {
-                    callback : data.onStart.toString(),
+                    callback : data.onStart._stringified || data.onStart.toString(),
                     execAsyncID : execAsyncID,
+                    data : data.data
                 };
 
+                data.onStart._stringified = dataContainer.value.callback;
+
                 this.callbacks[execAsyncID] = data.onComplete;
+            } else if (action == "exec"){
+                console.log(data);
+                dataContainer.value = {
+                    callback : data.callback._stringified || data.callback.toString(),
+                    data : data.data
+                }
             } else {
                 dataContainer.value = data;
             }
