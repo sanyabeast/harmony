@@ -20,6 +20,12 @@
 </head>
 <body>
     <div id="testElement"></div>
-    <script data-main="src/main" src="node_modules/requirejs/require.js"></script>
+    <script src="harmony.js"></script>
+    <script type="text/javascript">
+        harmony.on("master-worker", function(data, subUID, workerUID, harmony){
+            console.log(data, subUID, workerUID, harmony);
+        });
+    </script>
+    <!-- <script data-main="src/main" src="node_modules/requirejs/require.js"></script> -->
 </body>
 </html>
