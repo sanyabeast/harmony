@@ -45,7 +45,8 @@ var depenedncies = [];
 
         this.UID = this.util.genUID("harmony");
 
-        this.eventCallbacks = {}
+        this.eventCallbacks = {};
+        this.harmonyCallbacks = {};
 
         this.workers = { 
             master : this.__createWorker("master-worker"),
@@ -95,6 +96,9 @@ var depenedncies = [];
             },
             iterateObj : function(obj, callback, context){
                 for (var k in obj){callback.call(context, obj[k], k, obj); }
+            },
+            createCallback : function(callback, callbackUID){
+                
             }
         },
         extra : {
@@ -116,7 +120,7 @@ var depenedncies = [];
 
                 var post = function(data){
                     self.postMessage(data);
-                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just posted message"].join(" "));
+                    // LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just posted message"].join(" "));
                 };
 
 
@@ -151,6 +155,14 @@ var depenedncies = [];
                         }
                     }
 
+                    if (data.data && typeof data.data == "object"){
+                        for (var k in data.data){
+                            if (typeof data.data[k] == "string" && data.data[k].indexOf("func::") == 0){
+                                data.data[k] = __toFunc(data.data[k]);
+                            }
+                        }
+                    }
+
                     __run.call(self, data);
                 };
 
@@ -158,6 +170,22 @@ var depenedncies = [];
         },
         Harmony : Harmony,
         WorkerManager : WorkerManager,
+        callback : function(callback){
+            var callbackUID = this.util.genUID("harmony-callback");
+            this.harmonyCallbacks[callbackUID] = callback;
+
+            var workerCallback = function(data){
+                post({
+                    harmonyCallbackUID : "$callbackUID",
+                    data : data
+                });
+            };
+
+            return this.util.template(this.util.func2String(workerCallback), {
+                callbackUID : callbackUID
+            });
+
+        },
         on : function(workerUID, callback, subUID){
             subUID = subUID || this.util.genUID("event-sub");
             this.eventCallbacks[workerUID] = this.eventCallbacks[workerUID] || {};
@@ -203,6 +231,14 @@ var depenedncies = [];
         },
         putMessage : function(workerUID, data){
             this.eventCallbacks[workerUID] = this.eventCallbacks[workerUID] || {};
+
+            if (data.harmonyCallbackUID){
+                var callback = this.harmonyCallbacks[data.harmonyCallbackUID];
+                callback(data.data);
+                // delete this.harmonyCallbacks[data.harmonyCallbackUID];
+                return;
+            }
+
             this.util.iterateObj(this.eventCallbacks[workerUID], function(callback, subUID){
                 callback(data, subUID, workerUID, this);
             }, this);
