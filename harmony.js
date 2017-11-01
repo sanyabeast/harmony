@@ -1,6 +1,4 @@
-var depenedncies = [];
-
-(function (root, factory) { if (typeof define === "function" && define.amd) { define(depenedncies, factory); } else if (typeof module === "object" && module.exports) { module.exports = factory(true); } else { window.harmony = factory(); }
+(function (root, factory) { if (typeof define === "function" && define.amd) { define([], factory); } else if (typeof module === "object" && module.exports) { module.exports = factory(true); } else { window.harmony = factory(); }
 }(this, function(){
 
     var harmony;
