@@ -1,5 +1,6 @@
 (function (root, factory) { if (typeof define === "function" && define.amd) { define([], factory); } else if (typeof module === "object" && module.exports) { module.exports = factory(true); } else { window.harmony = factory(); }
 }(this, function(){
+    'use strict';
 
     var harmony;
 
@@ -8,9 +9,14 @@
         this.harmony = harmony;
         this.UID = workerUID;
 
-        this.worker = new window.Worker(window.URL.createObjectURL(
-            new window.Blob([ workerSource ], { type: "text/javascript" })
-        ));
+        if (window.Worker){
+            this.worker = new window.Worker(window.URL.createObjectURL(
+                new window.Blob([ workerSource ], { type: "text/javascript" })
+            ));
+        } else {
+            this.worker = new PseudoWorker(workerSource);
+        }
+
 
         this.worker.onmessage = this.__onMessage.bind(this);
     };
@@ -28,6 +34,9 @@
             }
 
             this.worker.postMessage(postData);
+        },
+        kill : function(){
+            this.worker.terminate();
         },
         __onMessage : function(messageEvt){
             var data = messageEvt.data;
@@ -153,7 +162,7 @@
                         }
                     }
 
-                    if (data.data && typeof data.data == "object"){
+                    if (data && data.data && typeof data.data == "object"){
                         for (var k in data.data){
                             if (typeof data.data[k] == "string" && data.data[k].indexOf("func::") == 0){
                                 data.data[k] = __toFunc(data.data[k]);
