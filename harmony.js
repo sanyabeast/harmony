@@ -150,7 +150,7 @@
                         break;
                     }
 
-                    LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just run recieved command -", command.type].join(" "));
+                    //LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just run recieved command -", command.type].join(" "));
                 };
 
                 self.onmessage = function(messageEvt){
