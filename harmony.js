@@ -258,7 +258,7 @@
         __postMessage : function(workerUID, data){
             this.workers[workerUID].post(data);
         },
-        __createWorker(workerUID){
+        __createWorker : function(workerUID){
             var worker = new this.WorkerManager(this, workerUID, this.util.toIIFEString(this.extra.workerSource, {
                 workerUID : workerUID,
                 logEnabled : true
