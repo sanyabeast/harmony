@@ -22,18 +22,38 @@
     };
 
     WorkerManager.prototype = {
-        post : function(data){
+        post : function(postRequest){
             var postData = {};
+            var transferables = [];
 
-            for (var k in data){
-                if (typeof data[k] == "function"){
-                    postData[k] = this.harmony.util.func2String(data[k]);
+            for (var k in postRequest){
+                if (typeof postRequest[k] == "function"){
+                    postData[k] = this.harmony.util.func2String(postRequest[k]);
+                } else if (typeof postRequest[k] == "object" && postRequest[k] instanceof window.ArrayBuffer && postRequest.transfer !== false){
+                    postData[k] = postRequest[k];
+                    transferables.push(postData[k].buffer);
                 } else {
-                    postData[k] = data[k];
+                    postData[k] = postRequest[k];
                 }
             }
 
-            this.worker.postMessage(postData);
+            if (postRequest.data){
+                postData.data = {};
+                for (var k in postRequest.data){
+                    // console.log(k);
+                    if (typeof postRequest.data[k] == "function"){
+                        postData.data[k] = this.harmony.util.func2String(postRequest.data[k]);
+                    } else if (typeof postRequest.data[k] == "object" && postRequest.data[k].buffer instanceof window.ArrayBuffer && postRequest.transfer !== false){
+                        console.log("transfering");
+                        postData.data[k] = postRequest.data[k];
+                        transferables.push(postData.data[k].buffer);
+                    } else {
+                        postData.data[k] = postRequest.data[k];
+                    }
+                }
+            }
+
+            this.worker.postMessage(postData, transferables);
         },
         kill : function(){
             this.worker.terminate();
@@ -125,8 +145,23 @@
                     return result;
                 };
 
-                var post = function(data){
-                    self.postMessage(data);
+                var post = function(postData){
+                    var transferables = [];
+
+                    console.log(postData, ArrayBuffer);
+
+                    if (postData.data){
+                        for (var k in postData.data){
+                            if (typeof postData.data[k] == "object" && postData.data[k].buffer instanceof ArrayBuffer){
+                                transferables.push(postData.data[k].buffer);
+                            }
+                        }
+                    }
+
+                    console.log(transferables);
+
+                    self.postMessage(postData, transferables);
+                    // console.log(data);
                     // LOG_ENABLED && console.log(["harmony:", WORKER_ID,  "just posted message"].join(" "));
                 };
 
@@ -215,12 +250,13 @@
 
             return this;
         },
-        run : function(workerUID, handler, data){
+        run : function(workerUID, handler, data, transfer){
             var worker = this.__getWorker(workerUID);
             worker.post({
                 type : "exec",
                 handler : handler,
-                data : data
+                data : data,
+                transfer : typeof transfer == "boolean" ? transfer : true
             }); 
 
             return this;
